@@ -28,6 +28,7 @@ import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import net.minecraftforge.fml.loading.FMLLoader;
 import net.minecraftforge.registries.ForgeRegistries;
+import net.minecraftforge.server.ServerLifecycleHooks;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -44,7 +45,7 @@ public class DoesPotatoTick {
 
     public static final ForgeConfigSpec COMMON_CONFIG;
     public static final ForgeConfigSpec.IntValue LIVING_HORIZONTAL_TICK_DIST, LIVING_VERTICAL_TICK_DIST;
-    public static final ForgeConfigSpec.BooleanValue OPTIMIZE_ITEM_MOVEMENT, IGNORE_DEAD_ENTITIES, TICKING_RAIDER_ENTITIES_IN_RAID, OPTIMIZE_ENTITIES_TICKING, SEND_MESSAGE;
+    public static final ForgeConfigSpec.BooleanValue OPTIMIZE_ITEM_MOVEMENT, IGNORE_DEAD_ENTITIES, TICKING_RAIDER_ENTITIES_IN_RAID, OPTIMIZE_ENTITIES_TICKING, SEND_MESSAGE, ALLOW_TICKING_FORCE_LOADED;
     public static final ForgeConfigSpec.ConfigValue<List<? extends String>> ENTITIES_WHITELIST, ITEMS_WHITELIST, ENTITIES_MOD_ID_WHITELIST, RAID_ENTITIES_WHITELIST, RAID_ENTITIES_MOD_ID_LIST, DIMENSION_WHITELIST;
 
     static {
@@ -76,6 +77,7 @@ public class DoesPotatoTick {
         TICKING_RAIDER_ENTITIES_IN_RAID = builder.comment("With this turned on, all the raider won't stop ticking in raid chunks even if they are far from players (well this is not perfect as the raiders may walk out of the raid range)").define("TickRaidersInRaid", true);
         RAID_ENTITIES_WHITELIST = builder.comment("Similar with entity whitelist, but only take effect in raid.").defineList("RaidEntitiesWhiteList", ObjectArrayList.wrap(new String[]{"minecraft:witch", "minecraft:vex"}), Predicates.alwaysTrue());
         RAID_ENTITIES_MOD_ID_LIST = builder.comment("Similar with entity modID whitelist, but only take effect in raid").defineList("RaidEntitiesModIDWhiteList", new ObjectArrayList<>(), Predicates.alwaysTrue());
+        ALLOW_TICKING_FORCE_LOADED = builder.comment("Allow ticking of entities in force loaded chunks").define("AllowForceLoaded", true);
         DIMENSION_WHITELIST = builder.comment("Leave this empty for applying to all the dimensions", "Entities in these dimensions will be affected by the optimization").defineList("DimensionWhitelist", new ObjectArrayList<>(), Predicates.alwaysTrue());
         IGNORE_DEAD_ENTITIES = builder.comment("This this is enabled, tickable check will run a lot faster, but the entity will not die out of range").define("IgnoreDeadEntities", false);
         builder.pop();
@@ -120,6 +122,11 @@ public class DoesPotatoTick {
                 if (isOptimizableItemEntity(entity)) return ThreadLocalRandom.current().nextBoolean() || ThreadLocalRandom.current().nextBoolean();
                 BlockPos entityPos = entity.blockPosition();
                 if (isInClaimedChunk(level, entityPos)) return true;
+                if(ALLOW_TICKING_FORCE_LOADED.get()) {
+                    ServerLevel lvl = ((ServerLevel) entity.level);
+                    //var chunk = lvl.getChunkAt(entityPos);
+                    if(!isNearPlayer(lvl, entityPos) && lvl.isLoaded(entityPos)) return true;
+                }
                 EntityType<?> entityType = entity.getType();
                 if (((Tickable.EntityType) entityType).doespotatotick$shouldAlwaysTick()) return true;
                 if (shouldTickInRaid(level, entityPos, entityType, entity)) return true;
