@@ -18,6 +18,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.raid.Raider;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraftforge.common.ForgeConfigSpec;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.entity.player.PlayerEvent;
@@ -125,7 +126,11 @@ public class DoesPotatoTick {
                 if(ALLOW_TICKING_FORCE_LOADED.get()) {
                     ServerLevel lvl = ((ServerLevel) entity.level);
                     //var chunk = lvl.getChunkAt(entityPos);
-                    if(!isNearPlayer(lvl, entityPos) && lvl.isLoaded(entityPos)) return true;
+                    if(!isNearPlayer(lvl, entityPos) && lvl.isLoaded(entityPos)) {
+                        // Check if it is a block entity or a mob
+                        if(!(entity instanceof LivingEntity) )
+                            return true;
+                    }
                 }
                 EntityType<?> entityType = entity.getType();
                 if (((Tickable.EntityType) entityType).doespotatotick$shouldAlwaysTick()) return true;
